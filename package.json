@@ -1,0 +1,23 @@
+{
+  "name": "leancore-support-chat",
+  "private": true,
+  "description": "Chat de soporte en tiempo real: prueba técnica para LeanCore",
+  "workspaces": [
+    "code/server",
+    "code/web"
+  ],
+  "engines": {
+    "node": ">=24"
+  },
+  "scripts": {
+    "dev": "concurrently -n server,web -c blue,green \"npm:dev:server\" \"npm:dev:web\"",
+    "dev:server": "npm run dev -w code/server",
+    "dev:web": "npm run dev -w code/web",
+    "test": "npm run test --workspaces --if-present",
+    "test:e2e:setup": "npx playwright install chromium",
+    "test:e2e": "playwright test"
+  },
+  "devDependencies": {
+    "concurrently": "^10.0.5"
+  }
+}

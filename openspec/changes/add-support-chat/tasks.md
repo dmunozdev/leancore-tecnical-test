@@ -4,11 +4,11 @@ Orden de trabajo: contrato → front con mocks → back → integración → pru
 
 ## 0. Scaffolding (20 min)
 
-- [ ] 0.1 Crear el repositorio público con la estructura: `openspec/` y `.claude/` en la raíz, y el código en `code/server` y `code/web`
-- [ ] 0.2 Ejecutar `openspec init --tools claude`, copiar la carpeta `openspec/` con esta spec y validar con `openspec validate add-support-chat --strict`
-- [ ] 0.3 Crear el `package.json` de la raíz con `npm run dev`, que levanta el servidor y el front a la vez con `concurrently`, y los scripts de pruebas
-- [ ] 0.4 Fijar la versión de Node con `.nvmrc` y el campo `engines`
-- [ ] 0.5 `.gitignore` con `node_modules`, `dist`, `.env`, `.claude/settings.local.json` y los resultados de Playwright
+- [x] 0.1 Crear el repositorio público con la estructura: `openspec/` y `.claude/` en la raíz, y el código en `code/server` y `code/web`
+- [x] 0.2 Ejecutar `openspec init --tools claude`, copiar la carpeta `openspec/` con esta spec y validar con `openspec validate add-support-chat --strict`
+- [x] 0.3 Crear el `package.json` de la raíz con `npm run dev`, que levanta el servidor y el front a la vez con `concurrently`, y los scripts de pruebas
+- [x] 0.4 Fijar la versión de Node con `.nvmrc` y el campo `engines`
+- [x] 0.5 `.gitignore` con `node_modules`, `dist`, `.env`, `.claude/settings.local.json` y los resultados de Playwright
 
 ## 1. Contrato (20 min)
 

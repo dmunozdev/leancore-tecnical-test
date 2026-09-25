@@ -1,6 +1,16 @@
-  node_modules/
-  dist/
-  .env
-  test-results/
-  playwright-report/
-  .claude/settings.local.json
+# Dependencias y builds
+node_modules/
+dist/
+
+# Variables de entorno
+.env
+.env.*
+
+# Configuración local de Claude Code
+.claude/settings.local.json
+
+# Resultados de Playwright
+test-results/
+playwright-report/
+blob-report/
+playwright/.cache/
