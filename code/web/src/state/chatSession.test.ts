@@ -99,17 +99,46 @@ describe('sesión de chat con MockTransport', () => {
     expect(new Set(sends.map((e) => (e.type === 'message:send' ? e.messageId : '')))).toHaveProperty('size', 1);
   });
 
-  it('con ACKs perdidos, el reintento no duplica el mensaje', async () => {
+  it('un pendiente cuyo ACK se perdió en la caída y llega en el history queda enviado y no se reenvía', async () => {
     const chat = setup();
     await vi.advanceTimersByTimeAsync(1000);
     chat.transport.faults.dropAcks = true;
 
-    chat.session.send('ACK perdido');
-    await vi.advanceTimersByTimeAsync(6000); // pasa un reintento
-
-    expect(chat.sentMessages().length).toBeGreaterThanOrEqual(2);
+    chat.session.send('llegó sin ACK');
+    // A los 150 ms el servidor ya lo guardó; el message:new iba en camino (llega a los 300 ms)
+    // y se pierde con la caída. El cliente se queda con el pendiente sin confirmar.
+    await vi.advanceTimersByTimeAsync(200);
+    chat.transport.dropConnection(2000);
+    chat.transport.faults.dropAcks = false;
     expect(chat.transport.server.findAfter('demo', 0)).toHaveLength(1);
+    expect(texts(chat.state)).toEqual(['-:llegó sin ACK:pending']);
+
+    // Al reconectar, el history lo trae confirmado: no debe volver a salir.
+    await vi.advanceTimersByTimeAsync(3000);
+    expect(chat.state.connection).toBe('open');
+    expect(texts(chat.state)).toEqual(['1:llegó sin ACK:sent']);
+    expect(chat.sentMessages()).toHaveLength(1);
+
+    // Tampoco más tarde, cuando habrían vencido los reintentos.
+    await vi.advanceTimersByTimeAsync(20_000);
+    expect(chat.sentMessages()).toHaveLength(1);
+    expect(chat.transport.server.findAfter('demo', 0)).toHaveLength(1);
+  });
+
+  it('un pendiente con el ACK perdido que llega por message:new queda enviado y no se reintenta', async () => {
+    const chat = setup();
+    await vi.advanceTimersByTimeAsync(1000);
+    chat.transport.faults.dropAcks = true; // nunca llega el ACK, pero sí el message:new
+
+    chat.session.send('ACK perdido');
+    await vi.advanceTimersByTimeAsync(1000);
     expect(texts(chat.state)).toEqual(['1:ACK perdido:sent']);
+
+    // Pasado el plazo de los 3 intentos (15 s), no hubo reintentos ni cambió a "no enviado".
+    await vi.advanceTimersByTimeAsync(20_000);
+    expect(chat.sentMessages()).toHaveLength(1);
+    expect(texts(chat.state)).toEqual(['1:ACK perdido:sent']);
+    expect(chat.transport.server.findAfter('demo', 0)).toHaveLength(1);
   });
 
   it('tras un reinicio del servidor limpia el historial y reenvía los pendientes al servidor nuevo', async () => {

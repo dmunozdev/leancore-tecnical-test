@@ -1,4 +1,4 @@
-import { MAX_TEXT_LENGTH } from '../contract';
+import { MAX_TEXT_LENGTH, type Message } from '../contract';
 import type { ChatTransport } from '../transport/ChatTransport';
 import type { ChatAction, ChatState } from './chatReducer';
 import { PendingQueue } from './pendingQueue';
@@ -23,6 +23,14 @@ export function startChatSession(
     (messageId) => dispatch({ type: 'local:failed', messageId }),
   );
 
+  /**
+   * Un mensaje propio confirmado por el servidor (con `seq`) cuenta como ACK para la cola.
+   * Se filtra por remitente: la cola indexa por `messageId`, y el de otro remitente no confirma el propio.
+   */
+  const confirmIfOwn = (message: Message) => {
+    if (message.sender === getState().role) queue.ack(message.messageId);
+  };
+
   const unsubscribe = transport.subscribe({
     onStatus(status) {
       dispatch({ type: 'connection', status });
@@ -39,6 +47,8 @@ export function startChatSession(
         }
         case 'history':
           dispatch({ type: 'history', messages: event.messages });
+          // Un propio que ya viene confirmado (su ACK se perdió en la caída) no se reenvía.
+          for (const m of event.messages) confirmIfOwn(m);
           // Primero el contexto, después los pendientes (decisión 5).
           queue.resume();
           break;
@@ -48,6 +58,7 @@ export function startChatSession(
           break;
         case 'message:new':
           dispatch({ type: 'message:new', message: event.message });
+          confirmIfOwn(event.message);
           break;
         case 'error':
           if (event.messageId) queue.fail(event.messageId);
