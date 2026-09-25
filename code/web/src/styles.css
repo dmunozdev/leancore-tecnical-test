@@ -1,0 +1,141 @@
+:root {
+  --bg: #f5f5f4;
+  --surface: #ffffff;
+  --text: #1c1917;
+  --muted: #78716c;
+  --own: #dbeafe;
+  --other: #ffffff;
+  --border: #e7e5e4;
+  --accent: #2563eb;
+  --warn-bg: #fef3c7;
+  --warn-text: #92400e;
+  --error: #b91c1c;
+  font-family: system-ui, sans-serif;
+  color: var(--text);
+  background: var(--bg);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: var(--bg);
+}
+
+button {
+  font: inherit;
+  padding: 0.6rem 1rem;
+  border: 0;
+  border-radius: 0.5rem;
+  background: var(--accent);
+  color: white;
+  cursor: pointer;
+}
+
+button:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.role-select {
+  max-width: 28rem;
+  margin: 15vh auto 0;
+  padding: 0 1rem;
+  text-align: center;
+}
+
+.role-select__buttons {
+  display: flex;
+  gap: 0.75rem;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+.chat {
+  display: flex;
+  flex-direction: column;
+  height: 100dvh;
+  max-width: 44rem;
+  margin: 0 auto;
+  background: var(--surface);
+  border-inline: 1px solid var(--border);
+}
+
+.chat__header {
+  padding: 0.75rem 1rem;
+  border-bottom: 1px solid var(--border);
+}
+
+.chat__banner {
+  padding: 0.5rem 1rem;
+  background: var(--warn-bg);
+  color: var(--warn-text);
+  text-align: center;
+}
+
+.chat__messages {
+  flex: 1;
+  overflow-y: auto;
+  list-style: none;
+  margin: 0;
+  padding: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.message {
+  max-width: 75%;
+  padding: 0.5rem 0.75rem;
+  border-radius: 0.75rem;
+  border: 1px solid var(--border);
+}
+
+.message--own {
+  align-self: flex-end;
+  background: var(--own);
+}
+
+.message--other {
+  align-self: flex-start;
+  background: var(--other);
+}
+
+.message--pending {
+  opacity: 0.7;
+}
+
+.message__sender,
+.message__status {
+  display: block;
+  font-size: 0.75rem;
+  color: var(--muted);
+}
+
+.message--failed .message__status {
+  color: var(--error);
+}
+
+.message__text {
+  margin: 0.15rem 0;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.chat__composer {
+  display: flex;
+  gap: 0.5rem;
+  padding: 0.75rem 1rem;
+  border-top: 1px solid var(--border);
+}
+
+.chat__composer input {
+  flex: 1;
+  min-width: 0;
+  font: inherit;
+  padding: 0.6rem 0.75rem;
+  border: 1px solid var(--border);
+  border-radius: 0.5rem;
+}
