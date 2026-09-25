@@ -121,6 +121,20 @@ openspec/             propuesta, specs, diseño y tareas
 
 ## Decisiones y trade-offs
 
+### El problema clásico y la solución elegida
+
+En un chat en tiempo real la red falla: las conexiones se caen, los mensajes se reintentan y dos personas escriben al mismo tiempo. Cada una de esas fallas rompe una propiedad distinta, y cada propiedad tiene su mecanismo:
+
+| Propiedad | Qué la rompe | Mecanismo |
+|---|---|---|
+| No perder mensajes | Una caída antes de que el servidor reciba o entregue el mensaje | El servidor confirma cada mensaje con un **ACK**; el emisor reintenta hasta recibirlo, y el receptor que se reconecta pide lo que le falta con `resume(lastSeq)` |
+| No duplicar | Un reintento de un mensaje que sí había llegado | El cliente genera el `messageId` antes de enviar y el servidor deduplica por remitente y `messageId`: el reintento recibe el mismo ACK y no se guarda de nuevo |
+| El mismo orden para todos | Dos mensajes casi simultáneos, o relojes distintos | El servidor asigna un `seq` por conversación y los clientes ordenan solo por `seq` |
+
+**Por qué esta combinación.** "Exactamente una vez" no se puede garantizar solo con el protocolo: si se pierde el ACK, el emisor no sabe si el mensaje llegó. Lo que sí se puede garantizar es entregar **al menos una vez**, con reintentos, y hacer el guardado **idempotente**; para el usuario el resultado es el mismo, cada mensaje aparece una sola vez. El orden lo pone el servidor y no los timestamps del cliente, porque los relojes difieren y dos mensajes pueden empatar; un solo contador no tiene ninguno de los dos problemas. Todo va sobre WebSocket con `ws`, sin Socket.IO, para que el ACK, el orden y la reconexión queden explícitos en el código y no escondidos en una librería.
+
+### Decisiones
+
 Resumen; cada decisión tiene sus alternativas y el porqué en el `design.md` de su cambio: la 1 a la 9 en [`add-support-chat`](openspec/changes/archive/2026-09-24-add-support-chat/design.md) y la 10 en [`harden-delivery`](openspec/changes/archive/2026-09-24-harden-delivery/design.md).
 
 | # | Decisión | Por qué | Trade-off |
