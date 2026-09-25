@@ -25,11 +25,11 @@ Orden de trabajo: contrato → front con mocks → back → integración → pru
 
 ## 3. Back (65 min)
 
-- [ ] 3.1 Dominio `ChatService` y puertos `MessageRepository` y `MessageNotifier` en `code/server`
-- [ ] 3.2 Adaptador `InMemoryMessageRepository`, con `seq` por conversación y `findByMessageId(conversationId, sender, messageId)`: la deduplicación es por remitente, no solo por `messageId`
-- [ ] 3.3 Gateway de `ws`: validar `role` y `conversation`, enviar `welcome` con el `epoch` y fijar el rol en la conexión
-- [ ] 3.4 Manejar `resume` y `message:send` (deduplicación, ACK y difusión), con validaciones y errores. La validación exige los campos requeridos e ignora los adicionales: un `sender` declarado por el cliente no se rechaza, solo se ignora
-- [ ] 3.5 Heartbeat con *ping* cada 30 s
+- [x] 3.1 Dominio `ChatService` y puertos `MessageRepository` y `MessageNotifier` en `code/server`
+- [x] 3.2 Adaptador `InMemoryMessageRepository`, con `seq` por conversación y `findByMessageId(conversationId, sender, messageId)`: la deduplicación es por remitente, no solo por `messageId`
+- [x] 3.3 Gateway de `ws`: validar `role` y `conversation`, enviar `welcome` con el `epoch` y fijar el rol en la conexión
+- [x] 3.4 Manejar `resume` y `message:send` (deduplicación, ACK y difusión), con validaciones y errores. La validación exige los campos requeridos e ignora los adicionales: un `sender` declarado por el cliente no se rechaza, solo se ignora
+- [x] 3.5 Heartbeat con *ping* cada 30 s
 
 ## 4. Integración (15 min)
 
