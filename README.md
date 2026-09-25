@@ -139,7 +139,7 @@ Resumen; cada decisión tiene sus alternativas y el porqué en el `design.md` de
 
 | # | Decisión | Por qué | Trade-off |
 |---|---|---|---|
-| 1 | **WebSocket con `ws`**, sin Socket.IO | Canal bidireccional y ACK, orden y reconexión explícitos en el código; mismo modelo que API Gateway WebSocket | La reconexión se implementa a mano |
+| 1 | **WebSocket con `ws`**, sin Socket.IO | Canal bidireccional y ACK, orden y reconexión explícitos en el código; mismo modelo que API Gateway WebSocket. Polling: más latencia y muchas peticiones vacías. SSE + POST es válida (tiene reconexión nativa con `Last-Event-ID`), pero necesita dos canales, uno para recibir y otro para enviar | La reconexión se implementa a mano |
 | 2 | **Al menos una vez + deduplicación**: ACK del servidor al emisor; el receptor se recupera por `lastSeq` | "Exactamente una vez" no se garantiza con el protocolo; la garantía real es la idempotencia | Reintentos: 5 s por intento, 3 intentos, y solo cuentan con la conexión abierta |
 | 3 | **Orden por `seq` del servidor**, por conversación | Una sola autoridad; no depende de relojes ni tiene empates | Un mensaje propio "enviando" puede cambiar de lugar al recibir su `seq` |
 | 4 | **Deduplicación por (conversación, remitente, `messageId`)**, con el id generado por el cliente | Todos los reintentos llevan el mismo id; otro remitente no puede "robar" un ACK ajeno | — |
@@ -158,7 +158,8 @@ Dos detalles de implementación que no están a simple vista:
 ### Despliegue en producción (decisión 8, no desplegado)
 
 - **API Gateway WebSocket** mantiene las conexiones y enruta `$connect`, `$disconnect` y los mensajes a **Lambdas**. Como el dominio está separado, pasar del servidor `ws` a Lambdas es cambiar los adaptadores, no la lógica.
-- **DynamoDB**: mensajes por conversación ordenados por `seq`; el `seq` sale de un contador atómico y una **escritura condicional** rechaza un `messageId` repetido del mismo remitente. `resume` es una consulta por `seq` mayor a `lastSeq`. Los ids de conexión también se guardan ahí y la difusión es `postToConnection`.
+- **DynamoDB**: mensajes por conversación ordenados por `seq`; el `seq` y la clave de idempotencia se escriben en una sola **transacción condicional**, para que un reintento no deje huecos en el `seq` (ver "Del local a producción"). `resume` es una consulta por `seq` mayor a `lastSeq`. Los ids de conexión también se guardan ahí y la difusión es `postToConnection`.
+- **Cómo escala:** ninguna instancia propia guarda las conexiones. API Gateway las mantiene abiertas, las Lambdas no guardan estado y cualquiera puede difundir con `postToConnection` usando los ids guardados en DynamoDB, así que agregar capacidad no requiere Pub/Sub ni sticky sessions. En la alternativa con ECS, cada conexión vive en una instancia y hace falta Redis Pub/Sub para que un mensaje llegue a participantes conectados en otras instancias.
 - Front estático en **S3 + CloudFront**; infraestructura con **Terraform** y pipelines; monitoreo de conexiones activas, mensajes por segundo, tiempo hasta el ACK y reconexiones.
 - A considerar: las conexiones duran máximo 2 horas y se cierran tras 10 minutos sin actividad, así que el cliente necesitaría un mensaje periódico; la reconexión con `resume` ya cubre el cierre forzado.
 - Alternativa evaluada: ECS Fargate con el mismo servidor `ws`, Redis Pub/Sub entre instancias y Postgres.
