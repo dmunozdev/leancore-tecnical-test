@@ -89,6 +89,12 @@ export class WsGateway {
   }
 
   private onConnection(socket: WebSocket, request: IncomingMessage): void {
+    // Un frame inválido o un payload mayor a maxPayload emite 'error' en el socket; sin este
+    // listener, Node lo trata como no manejado y mata el proceso. `ws` ya cierra la conexión
+    // con el código correcto (1002 o 1009); aquí solo se registra para diagnóstico.
+    socket.on('error', (error) => {
+      console.warn(`Conexión cerrada por error de protocolo: ${(error as NodeJS.ErrnoException).code ?? error.message}`);
+    });
     const params = new URL(request.url ?? '/', 'http://localhost').searchParams;
     const role = params.get('role');
     const conversationId = params.get('conversation') || DEFAULT_CONVERSATION;
@@ -104,12 +110,6 @@ export class WsGateway {
 
     const connection: Connection = { socket, role: role as Role, conversationId, alive: true };
     this.registry.add(connection);
-    // Un frame inválido o un payload mayor a maxPayload emite 'error' en el socket; sin este
-    // listener, Node lo trata como no manejado y mata el proceso. `ws` ya cierra la conexión
-    // con el código correcto (1002 o 1009); aquí solo se registra para diagnóstico.
-    socket.on('error', (error) => {
-      console.warn(`Conexión cerrada por error de protocolo: ${(error as NodeJS.ErrnoException).code ?? error.message}`);
-    });
     socket.on('pong', () => {
       connection.alive = true;
     });
