@@ -111,8 +111,11 @@ code/web/src/
     ChatTransport.ts        # interfaz
     WebSocketTransport.ts   # reconexión con espera exponencial y jitter
     MockTransport.ts        # inyecta duplicados, desorden y desconexiones
-  state/chatReducer.ts      # fusión por remitente y messageId, orden por seq, pendientes al final
-  hooks/useChat.ts          # epoch, lastSeq, cola de pendientes, estado de conexión
+  state/
+    chatReducer.ts          # fusión por remitente y messageId, orden por seq, pendientes al final
+    pendingQueue.ts         # espera del ACK, 3 intentos, pausa sin gastar intentos al caerse
+    chatSession.ts          # epoch, resume, reenvío de pendientes; sin React, para probarlo con el MockTransport
+  hooks/useChat.ts          # conecta la sesión con React
   components/               # pantalla inicial y vista del chat
   contract.ts
 ```
@@ -300,14 +303,23 @@ sequenceDiagram
 
 **Decisión:**
 - **Unitarias del dominio, con Vitest:** el `seq` es creciente; un `messageId` repetido del mismo remitente devuelve el mismo `seq` sin duplicar; el mismo `messageId` de otro remitente recibe un `seq` nuevo; `findAfter` devuelve solo lo posterior al `lastSeq`.
-- **Unitarias del cliente, con Vitest:** un duplicado se descarta y un pendiente se reubica al recibir su ACK, usando el `MockTransport`.
-- **E2E de reconexión, con Playwright:** dos contextos de navegador, uno de cliente y otro de agente. Se desconecta uno con `setOffline(true)`, el otro envía mensajes, se restaura la conexión y se verifica que no haya duplicados y que ambos vean el mismo orden. Playwright levanta el servidor y el front con su opción `webServer`.
-- **Opcional:** una prueba de componente de los estados "enviando", "enviado" y "no enviado".
+- **Unitarias del cliente, con Vitest:** un duplicado se descarta y un pendiente se reubica al recibir su ACK, usando el `MockTransport`; además, los intentos se pausan durante una caída, `lastSeq` es contiguo y un cambio de `epoch` limpia el historial.
+- **Integración del gateway, con Vitest:** el servidor `ws` real en un puerto libre con clientes `ws` reales: cierre 1008, `welcome`, ACK antes de la difusión, reintento sin re-difusión, `sender` ignorado, conversaciones aisladas, `INVALID_PAYLOAD` y heartbeat.
+- **E2E de reconexión, con Playwright:** dos contextos de navegador, uno de cliente y otro de agente. Se desconecta uno con `setOffline(true)` más `routeWebSocket`, el otro envía mensajes, se restaura la conexión y se verifica que no haya duplicados y que ambos vean el mismo orden. Playwright levanta el servidor y el front con su opción `webServer`.
+- **E2E de entrada y aislamiento:** pantalla inicial, entrada directa por URL, `conversation` inválida y dos conversaciones que no se mezclan.
+- **Opcional:** una prueba de componente de los estados "enviando", "enviado" y "no enviado". No se hizo: requería `@testing-library/react` y `jsdom`, fuera del stack.
 
 **Por qué:**
 - Las unitarias prueban por separado las propiedades que resuelven el problema clásico, y el repositorio en memoria y el transporte simulado las hacen simples.
 - La E2E es la única que prueba el problema de punta a punta, con dos clientes reales, una desconexión real y la recuperación a través del servidor.
 - La prueba de componentes queda como opcional porque la lógica que importa ya está cubierta por el reducer y por la E2E.
+
+**Cómo se corta la conexión en la E2E:**
+
+- **Opciones evaluadas:** solo `setOffline(true)`, reiniciar el servidor, y `setOffline(true)` más `routeWebSocket` de Playwright.
+- **Decisión:** `setOffline(true)` más `routeWebSocket`. La prueba intercepta el `/ws` del agente: al cortar, cierra las conexiones abiertas y rechaza las reconexiones mientras dura la caída. Antes de seguir, verifica que la interfaz muestre "Reconectando…".
+- **Por qué:** en Chromium, `setOffline(true)` bloquea las conexiones nuevas pero no cierra un WebSocket ya abierto; con eso solo, la prueba pasaba sin probar la reconexión.
+- **Descartada:** reiniciar el servidor, porque solo prueba el camino del `epoch` (historial borrado) y no el `resume` con el mismo `epoch`, que es el problema clásico.
 
 **Nota sobre Chromium:** no se puede instalar como dependencia de npm. `@playwright/test` va como dependencia de desarrollo, y el navegador se descarga con el script `test:e2e:setup`, que ejecuta `npx playwright install chromium`. Está documentado en el README.
 
@@ -323,7 +335,7 @@ sequenceDiagram
 | El receptor se desconecta | Al reconectar, `resume` le entrega lo que se perdió |
 | El emisor se desconecta con pendientes | Siguen "enviando" sin gastar intentos; al reconectar, los reenvía con el mismo `messageId` |
 | El servidor se reinicia | El cliente detecta el `epoch` distinto y se reinicia limpio |
-| Conexión medio abierta (wifi caído sin cierre) | El heartbeat la detecta y la cierra |
+| Conexión medio abierta (wifi caído sin cierre) | Del lado del servidor, el heartbeat la detecta y la cierra; del lado del cliente es un riesgo conocido (ver abajo) |
 | El usuario recarga la página | El historial se recupera con `resume(0)`; los pendientes se pierden (limitación documentada) |
 | Dos pestañas con el mismo rol | Ambas reciben los mensajes y los muestran como propios |
 | Texto vacío, muy largo o evento inválido | El servidor responde `error` y no lo procesa |
@@ -335,6 +347,7 @@ sequenceDiagram
 - **Sin autenticación:** el rol se puede elegir en la URL. El servidor fija el rol por conexión, pero sin identidad real cualquiera puede entrar como agente.
 - **Crecimiento de memoria:** no hay retención de mensajes; en producción se definiría una política de retención.
 - **Reubicación de pendientes:** un mensaje propio puede cambiar de lugar por un instante al recibir su `seq`.
+- **Conexión medio abierta del lado del cliente:** si la red se cae sin cerrar el WebSocket, el navegador puede tardar en notarlo. Mientras tanto, un envío se da por salido y puede terminar "no enviado" en lugar de quedar "enviando" hasta reconectar. Se resolvería con un heartbeat del lado del cliente (un `ping`/`pong` en el contrato), que no se implementó; la decisión 8 ya prevé un mensaje periódico del cliente para API Gateway.
 
 ## Uso de IA en las decisiones
 
