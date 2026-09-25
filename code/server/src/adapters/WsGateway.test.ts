@@ -198,25 +198,48 @@ describe('WsGateway (integración con clientes ws reales)', () => {
   });
 
   describe('tolerancia a clientes defectuosos', () => {
-    it('un frame mal formado cierra solo esa conexión; el servidor y las demás siguen vivos', async () => {
-      const survivor = await join('agente');
-
-      // Handshake WebSocket manual por un socket crudo, para poder mandar un frame que ws jamás
-      // produciría: uno de cliente sin máscara. Node exige la máscara (RFC 6455 §5.1); ws la valida
-      // al parsear y, sin listener de 'error' en el socket, tumbaba todo el proceso.
+    /**
+     * Handshake WebSocket manual por un socket crudo, para poder mandar un frame que ws jamás
+     * produciría: uno de cliente sin máscara. Node exige la máscara (RFC 6455 §5.1); ws la valida
+     * al parsear y, sin listener de 'error' en el socket, tumbaba todo el proceso.
+     * Resuelve cuando el servidor cierra el socket crudo.
+     */
+    async function sendUnmaskedFrame(query: string): Promise<void> {
       const raw: Socket = connectSocket(port, 'localhost');
       const handshakeDone = new Promise<void>((resolve) => raw.once('data', () => resolve()));
       raw.on('error', () => {});
       raw.write(
-        `GET /ws?role=cliente HTTP/1.1\r\nHost: localhost\r\nUpgrade: websocket\r\nConnection: Upgrade\r\n` +
+        `GET /ws${query} HTTP/1.1\r\nHost: localhost\r\nUpgrade: websocket\r\nConnection: Upgrade\r\n` +
           `Sec-WebSocket-Key: ${randomBytes(16).toString('base64')}\r\nSec-WebSocket-Version: 13\r\n\r\n`,
       );
       await handshakeDone;
       const rawClosed = new Promise<void>((resolve) => raw.once('close', () => resolve()));
       raw.write(Buffer.from([0x81, 0x02, 0x68, 0x69])); // frame de texto "hi", FIN, sin bit de máscara
       await rawClosed;
+    }
+
+    it('un frame mal formado cierra solo esa conexión; el servidor y las demás siguen vivos', async () => {
+      const survivor = await join('agente');
+
+      await sendUnmaskedFrame('?role=cliente');
 
       // El servidor sigue atendiendo: la conexión anterior sigue abierta y una nueva funciona.
+      expect(survivor.isOpen).toBe(true);
+      const newcomer = await join('cliente');
+      const id = sendMessage(newcomer, 'sigo viva');
+      const [ack] = await newcomer.waitFor('message:ack');
+      expect(ack).toMatchObject({ messageId: id });
+      const [event] = await survivor.waitFor('message:new');
+      expect(event.message).toMatchObject({ messageId: id, text: 'sigo viva' });
+    });
+
+    it('un frame mal formado en una conexión rechazada con 1008 no tumba el servidor', async () => {
+      const survivor = await join('agente');
+
+      // El servidor acepta el upgrade y luego la cierra con 1008 por el role; mientras espera el
+      // cierre del cliente, sigue leyendo frames, así que el frame inválido también llega aquí.
+      await sendUnmaskedFrame('?role=hacker');
+
       expect(survivor.isOpen).toBe(true);
       const newcomer = await join('cliente');
       const id = sendMessage(newcomer, 'sigo viva');
