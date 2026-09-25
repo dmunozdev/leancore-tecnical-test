@@ -12,8 +12,8 @@ Orden de trabajo: contrato → front con mocks → back → integración → pru
 
 ## 1. Contrato (20 min)
 
-- [ ] 1.1 Escribir `contract.ts` con los tipos de `Message`, `ClientEvent` y `ServerEvent`, en `code/server` y en `code/web`
-- [ ] 1.2 Revisar el contrato contra los escenarios de `message-delivery` y `support-conversation`
+- [x] 1.1 Escribir `contract.ts` con los tipos de `Message`, `ClientEvent` y `ServerEvent`, en `code/server` y en `code/web`
+- [x] 1.2 Revisar el contrato contra los escenarios de `message-delivery` y `support-conversation`
 
 ## 2. Front con mocks (55 min)
 
@@ -28,7 +28,7 @@ Orden de trabajo: contrato → front con mocks → back → integración → pru
 - [ ] 3.1 Dominio `ChatService` y puertos `MessageRepository` y `MessageNotifier` en `code/server`
 - [ ] 3.2 Adaptador `InMemoryMessageRepository`, con `seq` por conversación y `findByMessageId(conversationId, sender, messageId)`: la deduplicación es por remitente, no solo por `messageId`
 - [ ] 3.3 Gateway de `ws`: validar `role` y `conversation`, enviar `welcome` con el `epoch` y fijar el rol en la conexión
-- [ ] 3.4 Manejar `resume` y `message:send` (deduplicación, ACK y difusión), con validaciones y errores
+- [ ] 3.4 Manejar `resume` y `message:send` (deduplicación, ACK y difusión), con validaciones y errores. La validación exige los campos requeridos e ignora los adicionales: un `sender` declarado por el cliente no se rechaza, solo se ignora
 - [ ] 3.5 Heartbeat con *ping* cada 30 s
 
 ## 4. Integración (15 min)

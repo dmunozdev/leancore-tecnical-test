@@ -61,8 +61,10 @@ type ServerEvent =
 
 - `text`: entre 1 y 2.000 caracteres, sin contar espacios al inicio y al final.
 - `messageId`: formato UUID.
+- `conversation`: si falta o está vacío se usa `demo`; si no cumple `^[a-z0-9-]{1,64}$`, es inválido.
 - `role` y `conversation` inválidos en la URL: la conexión se cierra con el código 1008.
-- Un evento que no cumple el contrato recibe `error` con `INVALID_PAYLOAD` y no se procesa.
+- Un evento que no cumple el contrato recibe `error` con `INVALID_PAYLOAD` y no se procesa. Se validan los campos requeridos y se ignoran los adicionales: un `sender` declarado por el cliente no invalida el evento, simplemente no se usa.
+- Un `error` que incluye `messageId` es definitivo para ese mensaje: el cliente lo marca "no enviado" sin más reintentos.
 
 **Decisión de implementación:** el archivo del contrato se duplica en `code/server/` y `code/web/`, y esta sección es la fuente de verdad. En un proyecto real iría en un paquete compartido dentro de un monorepo; aquí ese montaje no se justifica para el alcance.
 

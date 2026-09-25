@@ -43,6 +43,16 @@ El servidor DEBE (MUST) fijar el rol y la conversación de cada participante al 
 - **WHEN** alguien se conecta con un `role` distinto de `cliente` o `agente`
 - **THEN** el servidor cierra la conexión con el código 1008
 
+#### Scenario: Conversación inválida
+
+- **WHEN** alguien se conecta con un `conversation` que no cumple `^[a-z0-9-]{1,64}$`
+- **THEN** el servidor cierra la conexión con el código 1008
+
+#### Scenario: Conversación por defecto
+
+- **WHEN** alguien se conecta sin `conversation` o con el valor vacío
+- **THEN** el servidor lo une a la conversación `demo`
+
 #### Scenario: Remitente de un mensaje
 
 - **WHEN** una conexión con rol `cliente` envía un mensaje
@@ -66,6 +76,11 @@ El servidor DEBE (MUST) rechazar los eventos que no cumplen el contrato.
 
 - **WHEN** llega un `message:send` con el texto vacío o de más de 2.000 caracteres
 - **THEN** el servidor responde `error` con el código `INVALID_TEXT` y no guarda el mensaje
+
+#### Scenario: Error asociado a un mensaje
+
+- **WHEN** el cliente recibe un `error` con el `messageId` de un mensaje "enviando"
+- **THEN** lo marca como "no enviado" sin más reintentos
 
 #### Scenario: Evento mal formado
 
