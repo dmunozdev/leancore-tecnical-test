@@ -1,0 +1,65 @@
+schema: spec-driven
+
+context: |
+  Proyecto: chat de soporte mínimo entre un cliente y un agente, construido como
+  prueba técnica para LeanCore. El foco no es la interfaz sino el problema clásico
+  del tiempo real: que los mensajes no se pierdan, que no se dupliquen por una
+  reconexión y que ambos participantes los vean en el mismo orden.
+
+  Stack:
+  - Servidor: Node.js + TypeScript, con la librería ws.
+  - Cliente: React + Vite + TypeScript, con el WebSocket nativo del navegador.
+  - Pruebas: Vitest para unitarias y Playwright para la E2E de reconexión.
+  - Ejecución local: npm run dev desde la raíz levanta servidor y front; versión de Node en .nvmrc. Sin Docker.
+
+  Estructura: openspec/ y .claude/ en la raíz; todo el código fuente en code/server y code/web.
+
+  Arquitectura:
+  - Servidor con arquitectura hexagonal. Dominio: ChatService, sin dependencias de
+    infraestructura. Puertos: MessageRepository y MessageNotifier. Adaptadores:
+    InMemoryMessageRepository y el gateway de ws.
+  - Cliente: la interfaz depende de ChatTransport, con dos implementaciones:
+    MockTransport y WebSocketTransport.
+
+  Orden de trabajo: contrato, luego front con mocks, luego back, la integración
+  y al final las pruebas. El contrato va primero porque lo
+  consumen ambos frentes; el front con mocks valida el contrato desde quien lo
+  consume y permite forzar duplicados, desorden y desconexiones.
+
+  Specs del cambio: message-delivery (ACK, deduplicación, orden, reconexión, epoch,
+  heartbeat) y support-conversation (selección de rol, intercambio, remitente,
+  validación).
+
+  Restricciones:
+  - Tiempo máximo de alrededor de 4 horas.
+  - Una sola instancia del servidor, con los datos en memoria.
+  - Sin autenticación.
+
+  Glosario:
+  - messageId: UUID que genera el cliente antes de enviar; es la clave de idempotencia.
+  - seq: número de orden que asigna el servidor, incremental por conversación.
+  - ACK: respuesta del servidor al emisor que confirma la recepción y devuelve el seq.
+  - lastSeq: último seq contiguo que tiene un cliente.
+  - epoch: id aleatorio que genera el servidor al iniciar; si cambia, el servidor se reinició.
+  - Pendiente: mensaje propio enviado que todavía no tiene ACK.
+
+rules:
+  specs:
+    - Escribir los requisitos en español e incluir la palabra clave MUST en cada uno.
+    - Cada requisito debe tener al menos un escenario con WHEN y THEN.
+  design:
+    - Cada decisión debe incluir las opciones evaluadas, la decisión, el porqué y las opciones descartadas.
+  tasks:
+    - Ordenar las tareas según el orden de trabajo del proyecto e incluir un tiempo estimado por sección.
+
+operations:
+  apply:
+    guidance:
+      - Implementar solo la sección de tasks.md que se indique, no todas a la vez.
+      - Respetar el contrato definido en design.md.
+      - No agregar dependencias distintas a las del stack sin preguntar.
+      - No implementar nada que esté marcado como fuera de alcance.
+      - Al terminar la sección, marcar sus tareas en tasks.md y explicar cómo probarla.
+  archive:
+    guidance:
+      - Confirmar que las pruebas pasan y que el README refleja las decisiones de design.md.
