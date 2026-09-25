@@ -14,6 +14,9 @@ import type { MessageNotifier } from '../domain/ports.ts';
 
 export const HEARTBEAT_INTERVAL_MS = 30_000;
 
+/** El mensaje válido más grande (2.000 caracteres) pesa hasta ~12 KB serializado; 16 KiB deja margen. */
+export const MAX_PAYLOAD_BYTES = 16 * 1024;
+
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 interface Connection {
@@ -74,7 +77,7 @@ export class WsGateway {
     this.chat = options.chat;
     this.registry = options.registry;
     this.epoch = options.epoch;
-    this.wss = new WebSocketServer({ server: options.server, path: '/ws' });
+    this.wss = new WebSocketServer({ server: options.server, path: '/ws', maxPayload: MAX_PAYLOAD_BYTES });
     this.wss.on('connection', (socket, request) => this.onConnection(socket, request));
     this.heartbeat = setInterval(() => this.checkAlive(), options.heartbeatIntervalMs ?? HEARTBEAT_INTERVAL_MS);
   }
@@ -101,6 +104,12 @@ export class WsGateway {
 
     const connection: Connection = { socket, role: role as Role, conversationId, alive: true };
     this.registry.add(connection);
+    // Un frame inválido o un payload mayor a maxPayload emite 'error' en el socket; sin este
+    // listener, Node lo trata como no manejado y mata el proceso. `ws` ya cierra la conexión
+    // con el código correcto (1002 o 1009); aquí solo se registra para diagnóstico.
+    socket.on('error', (error) => {
+      console.warn(`Conexión cerrada por error de protocolo: ${(error as NodeJS.ErrnoException).code ?? error.message}`);
+    });
     socket.on('pong', () => {
       connection.alive = true;
     });

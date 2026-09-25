@@ -1,12 +1,12 @@
-import { randomUUID } from 'node:crypto';
+import { randomBytes, randomUUID } from 'node:crypto';
 import { createServer, type Server } from 'node:http';
-import type { AddressInfo } from 'node:net';
+import { connect as connectSocket, type AddressInfo, type Socket } from 'node:net';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { WebSocket } from 'ws';
 import type { ServerEvent } from '../contract.ts';
 import { ChatService } from '../domain/ChatService.ts';
 import { InMemoryMessageRepository } from './InMemoryMessageRepository.ts';
-import { ConnectionRegistry, WsGateway } from './WsGateway.ts';
+import { ConnectionRegistry, MAX_PAYLOAD_BYTES, WsGateway } from './WsGateway.ts';
 
 const HEARTBEAT_MS = 100;
 const EPOCH = 'epoch-de-prueba';
@@ -194,6 +194,52 @@ describe('WsGateway (integración con clientes ws reales)', () => {
       const id = sendMessage(client, '   ');
       const [error] = await client.waitFor('error');
       expect(error).toMatchObject({ code: 'INVALID_TEXT', messageId: id });
+    });
+  });
+
+  describe('tolerancia a clientes defectuosos', () => {
+    it('un frame mal formado cierra solo esa conexión; el servidor y las demás siguen vivos', async () => {
+      const survivor = await join('agente');
+
+      // Handshake WebSocket manual por un socket crudo, para poder mandar un frame que ws jamás
+      // produciría: uno de cliente sin máscara. Node exige la máscara (RFC 6455 §5.1); ws la valida
+      // al parsear y, sin listener de 'error' en el socket, tumbaba todo el proceso.
+      const raw: Socket = connectSocket(port, 'localhost');
+      const handshakeDone = new Promise<void>((resolve) => raw.once('data', () => resolve()));
+      raw.on('error', () => {});
+      raw.write(
+        `GET /ws?role=cliente HTTP/1.1\r\nHost: localhost\r\nUpgrade: websocket\r\nConnection: Upgrade\r\n` +
+          `Sec-WebSocket-Key: ${randomBytes(16).toString('base64')}\r\nSec-WebSocket-Version: 13\r\n\r\n`,
+      );
+      await handshakeDone;
+      const rawClosed = new Promise<void>((resolve) => raw.once('close', () => resolve()));
+      raw.write(Buffer.from([0x81, 0x02, 0x68, 0x69])); // frame de texto "hi", FIN, sin bit de máscara
+      await rawClosed;
+
+      // El servidor sigue atendiendo: la conexión anterior sigue abierta y una nueva funciona.
+      expect(survivor.isOpen).toBe(true);
+      const newcomer = await join('cliente');
+      const id = sendMessage(newcomer, 'sigo viva');
+      const [ack] = await newcomer.waitFor('message:ack');
+      expect(ack).toMatchObject({ messageId: id });
+      const [event] = await survivor.waitFor('message:new');
+      expect(event.message).toMatchObject({ messageId: id, text: 'sigo viva' });
+    });
+
+    it('un mensaje mayor a maxPayload cierra esa conexión con 1009; el servidor y las demás siguen vivos', async () => {
+      const survivor = await join('agente');
+      const tooBig = connect('?role=cliente');
+      await tooBig.waitFor('welcome');
+
+      tooBig.send('x'.repeat(MAX_PAYLOAD_BYTES + 1024));
+      expect(await tooBig.closed).toBe(1009);
+
+      expect(survivor.isOpen).toBe(true);
+      const newcomer = await join('cliente');
+      const id = sendMessage(newcomer, 'sigo viva');
+      await newcomer.waitFor('message:ack');
+      const [event] = await survivor.waitFor('message:new');
+      expect(event.message).toMatchObject({ messageId: id, text: 'sigo viva' });
     });
   });
 
