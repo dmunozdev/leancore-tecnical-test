@@ -44,16 +44,16 @@ Orden de trabajo: contrato → front con mocks → back → integración → pru
 - [x] 5.2 Unitarias del `chatReducer` con `MockTransport`: duplicado descartado, pendiente reubicado al llegar el ACK, intentos pausados durante la desconexión y `lastSeq` contiguo cuando un `message:new` llega antes del `history`
 - [x] 5.3 Configurar Playwright: `@playwright/test` como dependencia de desarrollo, script `test:e2e:setup` que descarga Chromium con `npx playwright install chromium`, y `webServer` para levantar el servidor y el front antes de las pruebas
 - [x] 5.4 E2E de reconexión: dos contextos de navegador (cliente y agente); se desconecta uno con `setOffline(true)` más `routeWebSocket` (en Chromium, `setOffline` no cierra un WebSocket ya abierto, así que el WebSocket se corta desde la prueba y se rechazan las reconexiones mientras dura la caída), el otro envía mensajes, se restaura la conexión y se verifica que no haya duplicados y que ambos vean el mismo orden
-- [ ] 5.5 (Opcional) Prueba de componente de los estados "enviando", "enviado" y "no enviado"
+- [ ] 5.5 (Opcional, no se hizo: requería `@testing-library/react` y `jsdom`, fuera del stack; los estados quedan cubiertos por las pruebas del reducer y la E2E, ver README) Prueba de componente de los estados "enviando", "enviado" y "no enviado"
 - [x] 5.6 Integración del gateway con Vitest (20 min): levantar `WsGateway` en un puerto libre con un heartbeat corto y conectar clientes `ws` reales. Cubrir: `role` o `conversation` inválidos cierran con 1008; sin `conversation` entra a `demo`; `welcome` con `epoch`, rol y conversación; ACK antes del `message:new`; un reintento no se vuelve a difundir; el `sender` declarado por el cliente se ignora; conversaciones distintas no se mezclan; JSON inválido, UUID inválido, tipo desconocido y `lastSeq` negativo responden `INVALID_PAYLOAD` sin cerrar la conexión; `resume` devuelve solo lo posterior; una conexión que no responde el *ping* se cierra y deja de recibir mensajes
 - [x] 5.7 E2E de entrada y aislamiento (10 min): desde la pantalla inicial, "Entrar como cliente" conecta a `demo`; `?role=agente` entra directo al chat; `conversation` inválida muestra el aviso; dos clientes en conversaciones distintas no ven los mensajes del otro
 
 ## 6. Verificación y README (30 min)
 
-- [ ] 6.1 Recorrer a mano los escenarios de ambas specs: dos pestañas (una en incógnito), cortar la red con DevTools, red lenta y reinicio del servidor
-- [ ] 6.2 Clonar el repositorio en otra carpeta y seguir el README desde cero
-- [ ] 6.3 README: cómo correrlo, cómo probarlo, "Decisiones y trade-offs", términos, tiempo real invertido y qué faltó. Incluir como riesgo conocido que el cliente no detecta una conexión medio abierta (sin heartbeat del lado del cliente, un envío puede quedar "no enviado" en vez de "enviando"), y como ruido esperado el `ws proxy socket error` de Vite al cortar conexiones
-- [ ] 6.4 `openspec validate add-support-chat --strict`, `/opsx:verify` y archivar el cambio
+- [x] 6.1 Recorrer a mano los escenarios de ambas specs: dos pestañas (una en incógnito), cortar la red con DevTools, red lenta y reinicio del servidor
+- [x] 6.2 Clonar el repositorio en otra carpeta y seguir el README desde cero
+- [x] 6.3 README: cómo correrlo, cómo probarlo, "Decisiones y trade-offs", términos, tiempo real invertido y qué faltó. Incluir como riesgo conocido que el cliente no detecta una conexión medio abierta (sin heartbeat del lado del cliente, un envío puede quedar "no enviado" en vez de "enviando"), y como ruido esperado el `ws proxy socket error` de Vite al cortar conexiones
+- [x] 6.4 `openspec validate add-support-chat --strict`, `/opsx:verify` y archivar el cambio
 
 ## Si el tiempo se aprieta
 
