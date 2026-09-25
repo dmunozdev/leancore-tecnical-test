@@ -233,7 +233,7 @@ La implementación, según el historial de commits, fue el 24 de septiembre de 2
 | Correcciones post-auditoría (harden-delivery) | 21:40 y 21:42 |
 | Archivado de `add-support-chat` y `harden-delivery` | 21:52 |
 | Fix y test: `error` en conexiones rechazadas | 22:05 y 22:17 |
-| README, `CLAUDE.md` y paso a producción | 12:24 |
+| README, `CLAUDE.md` y paso a producción | 22:24 |
 
 ## Uso de IA
 
