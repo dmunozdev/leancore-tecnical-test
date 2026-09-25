@@ -4,7 +4,8 @@ import { ChatService } from './domain/ChatService.ts';
 import { InMemoryMessageRepository } from './adapters/InMemoryMessageRepository.ts';
 import { ConnectionRegistry, WsGateway } from './adapters/WsGateway.ts';
 
-const PORT = Number(process.env.PORT ?? 3000);
+// Variable propia y no PORT: PORT suele venir definida por otras herramientas y el proxy de Vite apunta al 3000.
+const PORT = Number(process.env.SERVER_PORT ?? 3000);
 
 // Si cambia, los clientes saben que el servidor se reinició y perdió el historial (decisión 5).
 const epoch = randomUUID();

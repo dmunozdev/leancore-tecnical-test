@@ -34,9 +34,9 @@ Orden de trabajo: contrato → front con mocks → back → integración → pru
 
 ## 4. Integración (15 min)
 
-- [ ] 4.1 Implementar `WebSocketTransport` con reconexión por espera exponencial y jitter
-- [ ] 4.2 Conectar el `epoch`, el `resume` y el reenvío de pendientes. `lastSeq` es el último `seq` contiguo: un `message:new` que llega antes del `history` se ubica por `seq`, pero no avanza `lastSeq` hasta que el hueco se llena
-- [ ] 4.3 Configurar el proxy de Vite para `/ws`
+- [x] 4.1 Implementar `WebSocketTransport` con reconexión por espera exponencial y jitter
+- [x] 4.2 Conectar el `epoch`, el `resume` y el reenvío de pendientes. `lastSeq` es el último `seq` contiguo: un `message:new` que llega antes del `history` se ubica por `seq`, pero no avanza `lastSeq` hasta que el hueco se llena
+- [x] 4.3 Configurar el proxy de Vite para `/ws`
 
 ## 5. Pruebas (40 min)
 

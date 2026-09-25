@@ -4,6 +4,7 @@ import { RoleSelect } from './components/RoleSelect';
 import { ChatView } from './components/ChatView';
 import { useChat } from './hooks/useChat';
 import { MockTransport } from './transport/MockTransport';
+import { WebSocketTransport } from './transport/WebSocketTransport';
 
 declare global {
   interface Window {
@@ -15,6 +16,8 @@ declare global {
 interface Route {
   role: Role | null;
   conversationId: string;
+  /** `?transport=mock` usa el servidor simulado en lugar del real. */
+  mock: boolean;
 }
 
 function readRoute(): Route {
@@ -23,6 +26,7 @@ function readRoute(): Route {
   return {
     role: ROLES.includes(role as Role) ? (role as Role) : null,
     conversationId: params.get('conversation') || DEFAULT_CONVERSATION,
+    mock: params.get('transport') === 'mock',
   };
 }
 
@@ -50,26 +54,39 @@ export function App() {
   const selectRole = (role: Role | null) => {
     const params = new URLSearchParams({ conversation: route.conversationId });
     if (role) params.set('role', role);
+    if (route.mock) params.set('transport', 'mock');
     window.history.pushState(null, '', `?${params}`);
-    setRoute({ role, conversationId: route.conversationId });
+    setRoute({ ...route, role });
   };
 
   if (route.role === null) return <RoleSelect onSelect={selectRole} />;
 
   return (
     <Chat
-      key={`${route.role}:${route.conversationId}`}
+      key={`${route.role}:${route.conversationId}:${route.mock}`}
       role={route.role}
       conversationId={route.conversationId}
+      mock={route.mock}
       onChangeRole={() => selectRole(null)}
     />
   );
 }
 
-function Chat({ role, conversationId, onChangeRole }: { role: Role; conversationId: string; onChangeRole: () => void }) {
-  const transport = useMemo(() => new MockTransport(role, conversationId), [role, conversationId]);
+interface ChatProps {
+  role: Role;
+  conversationId: string;
+  mock: boolean;
+  onChangeRole: () => void;
+}
+
+function Chat({ role, conversationId, mock, onChangeRole }: ChatProps) {
+  const transport = useMemo(
+    () => (mock ? new MockTransport(role, conversationId) : new WebSocketTransport(role, conversationId)),
+    [role, conversationId, mock],
+  );
 
   useEffect(() => {
+    if (!(transport instanceof MockTransport)) return;
     window.chatMock = transport;
     return () => {
       if (window.chatMock === transport) delete window.chatMock;
