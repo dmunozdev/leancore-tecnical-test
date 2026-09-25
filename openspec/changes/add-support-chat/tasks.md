@@ -22,6 +22,7 @@ Orden de trabajo: contrato → front con mocks → back → integración → pru
 - [x] 2.3 Implementar `chatReducer`: fusión por remitente y `messageId`, orden por `seq` y pendientes al final
 - [x] 2.4 Implementar la cola de pendientes: espera de 5 s por el ACK, 3 intentos y estado "no enviado". Los intentos solo cuentan con la conexión abierta: al caerse, el temporizador se pausa sin gastar intentos, y al reconectar el contador vuelve a cero
 - [x] 2.5 Pantalla inicial para elegir el rol (cliente o agente) y vista del chat con los estados "enviando", "enviado" y "no enviado", más el aviso "Reconectando…"
+- [x] 2.6 Estilo visual: tema oscuro, barra superior con el rol, el estado de la conexión ("Conectado", "Conectando…", "Reconectando…") y "Cambiar rol", mensajes propios como "Tú" y un textarea (Enter envía, Shift+Enter hace salto de línea) con placeholder según el rol. Sin lista de conversaciones ni "Cerrar conversación" (fuera de alcance)
 
 ## 3. Back (65 min)
 

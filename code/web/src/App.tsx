@@ -46,19 +46,27 @@ export function App() {
     );
   }
 
-  if (route.role === null) {
-    const enter = (role: Role) => {
-      const params = new URLSearchParams({ role, conversation: route.conversationId });
-      window.history.pushState(null, '', `?${params}`);
-      setRoute({ role, conversationId: route.conversationId });
-    };
-    return <RoleSelect onSelect={enter} />;
-  }
+  /** Entra con un rol, o vuelve a la pantalla inicial con `null`. La conversación se conserva en la URL. */
+  const selectRole = (role: Role | null) => {
+    const params = new URLSearchParams({ conversation: route.conversationId });
+    if (role) params.set('role', role);
+    window.history.pushState(null, '', `?${params}`);
+    setRoute({ role, conversationId: route.conversationId });
+  };
 
-  return <Chat key={`${route.role}:${route.conversationId}`} role={route.role} conversationId={route.conversationId} />;
+  if (route.role === null) return <RoleSelect onSelect={selectRole} />;
+
+  return (
+    <Chat
+      key={`${route.role}:${route.conversationId}`}
+      role={route.role}
+      conversationId={route.conversationId}
+      onChangeRole={() => selectRole(null)}
+    />
+  );
 }
 
-function Chat({ role, conversationId }: { role: Role; conversationId: string }) {
+function Chat({ role, conversationId, onChangeRole }: { role: Role; conversationId: string; onChangeRole: () => void }) {
   const transport = useMemo(() => new MockTransport(role, conversationId), [role, conversationId]);
 
   useEffect(() => {
@@ -69,5 +77,5 @@ function Chat({ role, conversationId }: { role: Role; conversationId: string }) 
   }, [transport]);
 
   const { state, send } = useChat(transport, role);
-  return <ChatView conversationId={conversationId} state={state} onSend={send} />;
+  return <ChatView state={state} onSend={send} onChangeRole={onChangeRole} />;
 }
